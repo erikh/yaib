@@ -1,0 +1,6 @@
+pages:
+  - - name: time
+      type: time
+    - name: static
+      type: static
+      value: "test"
