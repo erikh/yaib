@@ -16,7 +16,14 @@ impl Bar {
         mut w: impl std::io::Write,
         mut data: UnboundedReceiver<Collection>,
     ) -> Result<()> {
-        w.write_all("{\"version\":1}\n[\n".as_bytes())?;
+        serde_json::to_writer(
+            &mut w,
+            &Header {
+                version: 1,
+                ..Default::default()
+            },
+        )?;
+        w.write_all("\n[\n".as_bytes())?;
         w.flush()?;
 
         while let Some(collection) = data.recv().await {
