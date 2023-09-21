@@ -1,4 +1,6 @@
-use crate::collectors::{collect_load, collect_static, collect_time, Collection, CollectionType};
+use crate::collectors::{
+    collect_cpu, collect_load, collect_static, collect_time, Collection, CollectionType,
+};
 use anyhow::{anyhow, Result};
 use chrono::Duration;
 use fancy_duration::FancyDuration;
@@ -118,6 +120,9 @@ impl ConfigItem {
             }
             ModuleType::Load => {
                 tokio::spawn(collect_load(s, self.name.clone(), self.value.clone()));
+            }
+            ModuleType::CPU => {
+                tokio::spawn(collect_cpu(s, self.name.clone(), self.value.clone()));
             }
             _ => {}
         }

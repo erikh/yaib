@@ -1,10 +1,13 @@
 pages:
-  - - name: time
-      type: time
-      value: "%a %m/%d %I:%M%P"
-    - name: static
+  - - name: static
       type: static
       value: "yaib rules"
+    - name: cpu
+      type: cpu
+      value: "CPU: %usage"
     - name: load
       type: load
       value: "Load: %1"
+    - name: time
+      type: time
+      value: "Time: %a %m/%d %I:%M%P"
