@@ -5,6 +5,8 @@ pages:
     - name: cpu
       type: cpu
       value: "CPU: %usage"
+    - name: memory
+      type: memory
     - name: load
       type: load
       value: "Load: %1"

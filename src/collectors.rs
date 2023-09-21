@@ -1,5 +1,6 @@
 use crate::bar::Block;
 use anyhow::Result;
+use pretty_bytes::converter::convert;
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug, Clone)]
@@ -43,6 +44,22 @@ impl Collection {
                 let format = format.replace("%usage", &format!("{:.2}", usage));
                 block.full_text = format
             }
+            CollectionType::Memory {
+                total,
+                usage,
+                swap_total,
+                swap_usage,
+            } => {
+                let format = self
+                    .value
+                    .clone()
+                    .unwrap_or("total: %total, usage: %usage".to_string());
+                let format = format.replace("%total", &convert(*total as f64));
+                let format = format.replace("%usage", &convert(*usage as f64));
+                let format = format.replace("%swap_total", &convert(*swap_total as f64));
+                let format = format.replace("%swap_usage", &convert(*swap_usage as f64));
+                block.full_text = format
+            }
             _ => {}
         }
 
@@ -56,9 +73,20 @@ impl Collection {
 #[derive(Debug, Clone)]
 pub enum CollectionType {
     Static,
-    CPU { count: usize, usage: f64 },
-    Disk { total: usize, usage: usize },
-    Memory { total: usize, usage: usize },
+    CPU {
+        count: usize,
+        usage: f64,
+    },
+    Disk {
+        total: usize,
+        usage: usize,
+    },
+    Memory {
+        total: usize,
+        usage: usize,
+        swap_total: usize,
+        swap_usage: usize,
+    },
     Load(f64, f64, f64),
     Time(chrono::DateTime<chrono::Local>),
     Volume(usize),
@@ -121,6 +149,25 @@ pub async fn collect_cpu(
         collection_type: CollectionType::CPU {
             count,
             usage: avg * 100.0,
+        },
+        value,
+    })?)
+}
+
+pub async fn collect_memory(
+    s: UnboundedSender<Collection>,
+    name: String,
+    value: Option<String>,
+) -> Result<()> {
+    let mem = mprober_lib::memory::free()?;
+
+    Ok(s.send(Collection {
+        name,
+        collection_type: CollectionType::Memory {
+            total: mem.mem.total,
+            usage: mem.mem.used,
+            swap_total: mem.swap.total,
+            swap_usage: mem.swap.used,
         },
         value,
     })?)
