@@ -14,3 +14,4 @@ anyhow = "^1"
 chrono = "^0.4"
 fancy-duration = { version = "^0.5", default-features = false, features = [ "chrono" ] }
 tokio = { version = "^1", features = [ "full" ] }
+mprober-lib = "^0.1"

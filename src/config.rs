@@ -1,4 +1,4 @@
-use crate::collectors::{collect_static, collect_time, Collection, CollectionType};
+use crate::collectors::{collect_load, collect_static, collect_time, Collection, CollectionType};
 use anyhow::{anyhow, Result};
 use chrono::Duration;
 use fancy_duration::FancyDuration;
@@ -80,7 +80,7 @@ pub enum ModuleType {
 impl From<CollectionType> for ModuleType {
     fn from(value: CollectionType) -> Self {
         match value {
-            CollectionType::Static(..) => Self::Static,
+            CollectionType::Static => Self::Static,
             CollectionType::CPU { .. } => Self::CPU,
             CollectionType::Disk { .. } => Self::Disk,
             CollectionType::Memory { .. } => Self::Memory,
@@ -115,6 +115,9 @@ impl ConfigItem {
             }
             ModuleType::Time => {
                 tokio::spawn(collect_time(s, self.name.clone(), self.value.clone(), now));
+            }
+            ModuleType::Load => {
+                tokio::spawn(collect_load(s, self.name.clone(), self.value.clone()));
             }
             _ => {}
         }
