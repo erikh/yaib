@@ -1,6 +1,7 @@
 pages:
   - - name: time
       type: time
+      value: "%a %m/%d %l:%M%P"
     - name: static
       type: static
-      value: "test"
+      value: "yaib rules"

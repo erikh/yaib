@@ -48,8 +48,9 @@ impl ConfigPage {
     }
 
     pub async fn launch_collectors(&self, s: UnboundedSender<Collection>) -> Result<()> {
+        let now = chrono::Local::now();
         for item in &self.0 {
-            item.launch_collector(s.clone()).await?;
+            item.launch_collector(s.clone(), now).await?;
         }
 
         Ok(())
@@ -79,13 +80,13 @@ pub enum ModuleType {
 impl From<CollectionType> for ModuleType {
     fn from(value: CollectionType) -> Self {
         match value {
-            CollectionType::Static(_) => Self::Static,
+            CollectionType::Static(..) => Self::Static,
             CollectionType::CPU { .. } => Self::CPU,
             CollectionType::Disk { .. } => Self::Disk,
             CollectionType::Memory { .. } => Self::Memory,
             CollectionType::Load(..) => Self::Load,
-            CollectionType::Time(_) => Self::Time,
-            CollectionType::Volume(_) => Self::Volume,
+            CollectionType::Time(..) => Self::Time,
+            CollectionType::Volume(..) => Self::Volume,
         }
     }
 }
@@ -99,7 +100,11 @@ pub struct ConfigItem {
 }
 
 impl ConfigItem {
-    pub async fn launch_collector(&self, s: UnboundedSender<Collection>) -> Result<()> {
+    pub async fn launch_collector(
+        &self,
+        s: UnboundedSender<Collection>,
+        now: chrono::DateTime<chrono::Local>,
+    ) -> Result<()> {
         match self.typ {
             ModuleType::Static => {
                 if let Some(value) = &self.value {
@@ -109,7 +114,7 @@ impl ConfigItem {
                 }
             }
             ModuleType::Time => {
-                tokio::spawn(collect_time(s, self.name.clone()));
+                tokio::spawn(collect_time(s, self.name.clone(), self.value.clone(), now));
             }
             _ => {}
         }

@@ -21,7 +21,7 @@ impl Collection {
         let mut block = Block::default();
         match &self.collection_type {
             CollectionType::Static(s) => block.full_text = s.clone(),
-            CollectionType::Time(t) => block.full_text = t.format("%m/%d %H:%M").to_string(),
+            CollectionType::Time(t, format) => block.full_text = t.format(&format).to_string(),
             _ => {}
         }
 
@@ -39,7 +39,7 @@ pub enum CollectionType {
     Disk { total: usize, usage: usize },
     Memory { total: usize, usage: usize },
     Load(f64, f64, f64),
-    Time(chrono::NaiveDateTime),
+    Time(chrono::DateTime<chrono::Local>, String),
     Volume(usize),
 }
 
@@ -54,9 +54,14 @@ pub async fn collect_static(
     })?)
 }
 
-pub async fn collect_time(s: UnboundedSender<Collection>, name: String) -> Result<()> {
+pub async fn collect_time(
+    s: UnboundedSender<Collection>,
+    name: String,
+    value: Option<String>,
+    now: chrono::DateTime<chrono::Local>,
+) -> Result<()> {
     Ok(s.send(Collection {
         name,
-        collection_type: CollectionType::Time(chrono::Local::now().naive_local()),
+        collection_type: CollectionType::Time(now, value.unwrap_or("%m/%d %H:%M".to_string())),
     })?)
 }
