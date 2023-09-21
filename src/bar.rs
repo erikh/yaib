@@ -1,4 +1,4 @@
-use crate::collectors::Collection;
+use crate::{collectors::Collection, config::Config};
 use anyhow::Result;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -12,13 +12,27 @@ pub struct Bar {
 impl Bar {
     pub async fn emit_status(
         &mut self,
+        config: Config,
         mut w: impl std::io::Write,
         mut data: UnboundedReceiver<Collection>,
     ) -> Result<()> {
+        w.write("{\"version\":1}\n[\n".as_bytes())?;
+        w.flush()?;
+
         while let Some(collection) = data.recv().await {
             let block = collection.to_block();
             self.state.insert(collection.name(), block);
-            writeln!(w, "{:?}", self.state)?;
+            let mut v = Vec::new();
+            let items = &config.pages()[0].items();
+            for item in items {
+                if let Some(block) = self.state.get(&item.name) {
+                    v.push(block)
+                }
+            }
+
+            serde_json::to_writer(&mut w, &v)?;
+            w.write(",\n".as_bytes())?;
+            w.flush()?;
         }
 
         Ok(())
@@ -53,7 +67,8 @@ pub struct Block {
     pub instance: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub urgent: Option<bool>,
-    pub separator: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub separator: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub separator_block_width: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]

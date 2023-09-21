@@ -26,12 +26,27 @@ impl Config {
 
         Ok(())
     }
+
+    pub fn pages(&self) -> Vec<ConfigPage> {
+        self.pages.clone()
+    }
+
+    pub fn update_interval(&self) -> chrono::Duration {
+        self.update_interval
+            .clone()
+            .unwrap_or(FancyDuration(chrono::Duration::seconds(1)))
+            .duration()
+    }
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigPage(Vec<ConfigItem>);
 
 impl ConfigPage {
+    pub fn items(&self) -> Vec<ConfigItem> {
+        self.0.clone()
+    }
+
     pub async fn launch_collectors(&self, s: UnboundedSender<Collection>) -> Result<()> {
         for item in &self.0 {
             item.launch_collector(s.clone()).await?;
@@ -77,10 +92,10 @@ impl From<CollectionType> for ModuleType {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigItem {
-    name: String,
+    pub name: String,
     #[serde(rename = "type")]
-    typ: ModuleType,
-    value: Option<String>,
+    pub typ: ModuleType,
+    pub value: Option<String>,
 }
 
 impl ConfigItem {

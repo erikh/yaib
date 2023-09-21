@@ -25,6 +25,8 @@ impl Collection {
             _ => {}
         }
 
+        block.name = Some(self.name());
+
         block
     }
 }
