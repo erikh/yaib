@@ -97,6 +97,7 @@ pub struct ConfigItem {
     #[serde(rename = "type")]
     pub typ: ModuleType,
     pub value: Option<String>,
+    pub format: Option<String>,
 }
 
 impl ConfigItem {
@@ -107,26 +108,29 @@ impl ConfigItem {
     ) -> Result<()> {
         match self.typ {
             ModuleType::Static => {
-                if let Some(value) = &self.value {
-                    tokio::spawn(collect_static(s, self.name.clone(), value.clone()));
+                if self.value.is_some() {
+                    tokio::spawn(collect_static(s, self.clone()));
                 } else {
-                    return Err(anyhow!("Static item '{}' must have a value", self.name));
+                    return Err(anyhow!(
+                        "Static self.clone() '{}' must have a value",
+                        self.clone().name
+                    ));
                 }
             }
             ModuleType::Time => {
-                tokio::spawn(collect_time(s, self.name.clone(), self.value.clone(), now));
+                tokio::spawn(collect_time(s, self.clone(), now));
             }
             ModuleType::Load => {
-                tokio::spawn(collect_load(s, self.name.clone(), self.value.clone()));
+                tokio::spawn(collect_load(s, self.clone()));
             }
             ModuleType::CPU => {
-                tokio::spawn(collect_cpu(s, self.name.clone(), self.value.clone()));
+                tokio::spawn(collect_cpu(s, self.clone()));
             }
             ModuleType::Memory => {
-                tokio::spawn(collect_memory(s, self.name.clone(), self.value.clone()));
+                tokio::spawn(collect_memory(s, self.clone()));
             }
             ModuleType::Disk => {
-                tokio::spawn(collect_disk(s, self.name.clone(), self.value.clone()));
+                tokio::spawn(collect_disk(s, self.clone()));
             }
             _ => {}
         }

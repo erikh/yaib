@@ -4,15 +4,17 @@ pages:
       value: "yaib rules"
     - name: cpu
       type: cpu
-      value: "CPU: %usage"
+      format: "CPU: %usage%"
     - name: disk
       type: disk
       value: "/"
+      format: "Disk: T: %total, U: %usage"
     - name: memory
       type: memory
+      format: "Mem: T: %total, U: %usage"
     - name: load
       type: load
-      value: "Load: %1"
+      format: "1m Load: %1"
     - name: time
       type: time
-      value: "Time: %a %m/%d %I:%M%P"
+      format: "%a %m/%d %I:%M%P"

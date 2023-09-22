@@ -1,4 +1,4 @@
-use crate::bar::Block;
+use crate::{bar::Block, config::ConfigItem};
 use anyhow::{anyhow, Result};
 use pretty_bytes::converter::convert;
 use tokio::sync::mpsc::UnboundedSender;
@@ -7,6 +7,7 @@ use tokio::sync::mpsc::UnboundedSender;
 pub struct Collection {
     name: String,
     value: Option<String>,
+    format: Option<String>,
     collection_type: CollectionType,
 }
 
@@ -25,11 +26,11 @@ impl Collection {
             CollectionType::Static => block.full_text = self.value.clone().unwrap(),
             CollectionType::Time(t) => {
                 block.full_text = t
-                    .format(&self.value.clone().unwrap_or("%m/%d %H:%M".to_string()))
+                    .format(&self.format.clone().unwrap_or("%m/%d %H:%M".to_string()))
                     .to_string()
             }
             CollectionType::Load(one, five, fifteen) => {
-                let format = self.value.clone().unwrap_or("%1, %5, %15".to_string());
+                let format = self.format.clone().unwrap_or("%1, %5, %15".to_string());
                 let format = format.replace("%1", &one.to_string());
                 let format = format.replace("%5", &five.to_string());
                 let format = format.replace("%15", &fifteen.to_string());
@@ -37,7 +38,7 @@ impl Collection {
             }
             CollectionType::CPU { count, usage } => {
                 let format = self
-                    .value
+                    .format
                     .clone()
                     .unwrap_or("cpus: %count, usage: %usage".to_string());
                 let format = format.replace("%count", &count.to_string());
@@ -51,7 +52,7 @@ impl Collection {
                 swap_usage,
             } => {
                 let format = self
-                    .value
+                    .format
                     .clone()
                     .unwrap_or("total: %total, usage: %usage".to_string());
                 let format = format.replace("%total", &convert(*total as f64));
@@ -61,7 +62,10 @@ impl Collection {
                 block.full_text = format
             }
             CollectionType::Disk { total, usage } => {
-                let format = "total: %total, usage: %usage";
+                let format = self
+                    .format
+                    .clone()
+                    .unwrap_or("total: %total, usage: %usage".to_string());
                 let format = format.replace("%total", &convert(*total as f64));
                 let format = format.replace("%usage", &convert(*usage as f64));
                 block.full_text = format
@@ -98,50 +102,40 @@ pub enum CollectionType {
     Volume(usize),
 }
 
-pub async fn collect_static(
-    s: UnboundedSender<Collection>,
-    name: String,
-    value: String,
-) -> Result<()> {
+pub async fn collect_static(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
     Ok(s.send(Collection {
-        name,
+        name: item.name,
         collection_type: CollectionType::Static,
-        value: Some(value),
+        value: item.value,
+        format: item.format,
     })?)
 }
 
 pub async fn collect_time(
     s: UnboundedSender<Collection>,
-    name: String,
-    value: Option<String>,
+    item: ConfigItem,
     now: chrono::DateTime<chrono::Local>,
 ) -> Result<()> {
     Ok(s.send(Collection {
-        name,
+        name: item.name,
         collection_type: CollectionType::Time(now),
-        value,
+        value: item.value,
+        format: item.format,
     })?)
 }
 
-pub async fn collect_load(
-    s: UnboundedSender<Collection>,
-    name: String,
-    value: Option<String>,
-) -> Result<()> {
+pub async fn collect_load(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
     let avg = mprober_lib::load_average::get_load_average()?;
 
     Ok(s.send(Collection {
-        name,
+        name: item.name,
         collection_type: CollectionType::Load(avg.one, avg.five, avg.fifteen),
-        value,
+        value: item.value,
+        format: item.format,
     })?)
 }
 
-pub async fn collect_cpu(
-    s: UnboundedSender<Collection>,
-    name: String,
-    value: Option<String>,
-) -> Result<()> {
+pub async fn collect_cpu(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
     let avg = mprober_lib::cpu::get_all_cpu_utilization_in_percentage(
         false,
         std::time::Duration::from_millis(100),
@@ -151,53 +145,48 @@ pub async fn collect_cpu(
     let avg = avg.iter().fold(0.0, |acc, item| item + acc) / count as f64;
 
     Ok(s.send(Collection {
-        name,
+        name: item.name,
         collection_type: CollectionType::CPU {
             count,
             usage: avg * 100.0,
         },
-        value,
+        value: item.value,
+        format: item.format,
     })?)
 }
 
-pub async fn collect_memory(
-    s: UnboundedSender<Collection>,
-    name: String,
-    value: Option<String>,
-) -> Result<()> {
+pub async fn collect_memory(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
     let mem = mprober_lib::memory::free()?;
 
     Ok(s.send(Collection {
-        name,
+        name: item.name,
         collection_type: CollectionType::Memory {
             total: mem.mem.total,
             usage: mem.mem.used,
             swap_total: mem.swap.total,
             swap_usage: mem.swap.used,
         },
-        value,
+        value: item.value,
+        format: item.format,
     })?)
 }
 
-pub async fn collect_disk(
-    s: UnboundedSender<Collection>,
-    name: String,
-    value: Option<String>,
-) -> Result<()> {
-    if value.is_none() {
+pub async fn collect_disk(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
+    if item.value.is_none() {
         return Err(anyhow!(
             "Value must be provided and must point at a mount point"
         ));
     }
 
-    let stat = nix::sys::statvfs::statvfs(&std::path::PathBuf::from(&value.clone().unwrap()))?;
+    let stat = nix::sys::statvfs::statvfs(&std::path::PathBuf::from(&item.value.clone().unwrap()))?;
 
     Ok(s.send(Collection {
-        name,
+        name: item.name,
         collection_type: CollectionType::Disk {
             total: (stat.blocks() * stat.block_size()) as usize,
             usage: ((stat.blocks() - stat.blocks_available()) * stat.block_size()) as usize,
         },
-        value,
+        value: item.value,
+        format: item.format,
     })?)
 }
