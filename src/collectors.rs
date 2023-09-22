@@ -1,5 +1,5 @@
 use crate::bar::Block;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use pretty_bytes::converter::convert;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -58,6 +58,12 @@ impl Collection {
                 let format = format.replace("%usage", &convert(*usage as f64));
                 let format = format.replace("%swap_total", &convert(*swap_total as f64));
                 let format = format.replace("%swap_usage", &convert(*swap_usage as f64));
+                block.full_text = format
+            }
+            CollectionType::Disk { total, usage } => {
+                let format = "total: %total, usage: %usage";
+                let format = format.replace("%total", &convert(*total as f64));
+                let format = format.replace("%usage", &convert(*usage as f64));
                 block.full_text = format
             }
             _ => {}
@@ -168,6 +174,29 @@ pub async fn collect_memory(
             usage: mem.mem.used,
             swap_total: mem.swap.total,
             swap_usage: mem.swap.used,
+        },
+        value,
+    })?)
+}
+
+pub async fn collect_disk(
+    s: UnboundedSender<Collection>,
+    name: String,
+    value: Option<String>,
+) -> Result<()> {
+    if value.is_none() {
+        return Err(anyhow!(
+            "Value must be provided and must point at a mount point"
+        ));
+    }
+
+    let stat = nix::sys::statvfs::statvfs(&std::path::PathBuf::from(&value.clone().unwrap()))?;
+
+    Ok(s.send(Collection {
+        name,
+        collection_type: CollectionType::Disk {
+            total: (stat.blocks() * stat.block_size()) as usize,
+            usage: ((stat.blocks() - stat.blocks_available()) * stat.block_size()) as usize,
         },
         value,
     })?)

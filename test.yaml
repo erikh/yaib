@@ -5,6 +5,9 @@ pages:
     - name: cpu
       type: cpu
       value: "CPU: %usage"
+    - name: disk
+      type: disk
+      value: "/"
     - name: memory
       type: memory
     - name: load

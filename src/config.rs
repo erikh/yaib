@@ -125,6 +125,9 @@ impl ConfigItem {
             ModuleType::Memory => {
                 tokio::spawn(collect_memory(s, self.name.clone(), self.value.clone()));
             }
+            ModuleType::Disk => {
+                tokio::spawn(collect_disk(s, self.name.clone(), self.value.clone()));
+            }
             _ => {}
         }
 
