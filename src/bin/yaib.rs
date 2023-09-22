@@ -16,6 +16,6 @@ async fn main() -> Result<()> {
 
     loop {
         config.launch_collectors(s.clone()).await?;
-        tokio::time::sleep(std::time::Duration::new(1, 0)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 }

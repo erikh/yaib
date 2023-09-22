@@ -45,6 +45,7 @@ impl Bar {
         tokio::spawn(async move { obj.write_blocks(w, r).await.unwrap() });
 
         let mut last_send = chrono::Local::now() - config.update_interval();
+        let mut last_sent = Vec::new();
 
         while let Some(collection) = data.recv().await {
             let block = collection.to_block();
@@ -59,8 +60,12 @@ impl Bar {
                         v.push(block.clone())
                     }
                 }
-                s.send(v)?;
-                last_send = now;
+
+                if !last_sent.eq(&v) {
+                    s.send(v.clone())?;
+                    last_send = now;
+                    last_sent = v;
+                }
             }
         }
 
@@ -79,7 +84,7 @@ pub struct Header {
     click_events: Option<bool>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Block {
     pub full_text: String,
     #[serde(skip_serializing_if = "Option::is_none")]
