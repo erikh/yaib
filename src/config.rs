@@ -19,9 +19,13 @@ impl Config {
         Ok(serde_yaml::from_reader(r)?)
     }
 
-    pub async fn launch_collectors(&self, s: UnboundedSender<Collection>) -> Result<()> {
+    pub async fn launch_collectors(
+        &self,
+        s: UnboundedSender<Collection>,
+        result: UnboundedSender<Result<()>>,
+    ) -> Result<()> {
         for page in &self.pages {
-            page.launch_collectors(s.clone()).await?;
+            page.launch_collectors(s.clone(), result.clone()).await?;
         }
 
         Ok(())
@@ -47,10 +51,13 @@ impl ConfigPage {
         self.0.clone()
     }
 
-    pub async fn launch_collectors(&self, s: UnboundedSender<Collection>) -> Result<()> {
-        let now = chrono::Local::now();
+    pub async fn launch_collectors(
+        &self,
+        s: UnboundedSender<Collection>,
+        result: UnboundedSender<Result<()>>,
+    ) -> Result<()> {
         for item in &self.0 {
-            item.launch_collector(s.clone(), now).await?;
+            item.launch_collector(s.clone(), result.clone()).await?;
         }
 
         Ok(())
@@ -100,16 +107,24 @@ pub struct ConfigItem {
     pub format: Option<String>,
 }
 
+async fn spawn(
+    s: UnboundedSender<Result<()>>,
+    f: impl std::future::Future<Output = Result<()>> + Send + 'static,
+) -> Result<()> {
+    Ok(s.send(tokio::spawn(f).await?)?)
+}
+
 impl ConfigItem {
     pub async fn launch_collector(
         &self,
         s: UnboundedSender<Collection>,
-        now: chrono::DateTime<chrono::Local>,
+        result: UnboundedSender<Result<()>>,
     ) -> Result<()> {
+        let clone = self.clone();
         match self.typ {
             ModuleType::Static => {
                 if self.value.is_some() {
-                    tokio::spawn(collect_static(s, self.clone())).await??;
+                    tokio::spawn(spawn(result, collect_static(s, clone)));
                 } else {
                     return Err(anyhow!(
                         "Static self.clone() '{}' must have a value",
@@ -118,21 +133,21 @@ impl ConfigItem {
                 }
             }
             ModuleType::Time => {
-                tokio::spawn(collect_time(s, self.clone(), now)).await??;
+                tokio::spawn(spawn(result, collect_time(s, clone)));
             }
             ModuleType::Load => {
-                tokio::spawn(collect_load(s, self.clone())).await??;
+                tokio::spawn(spawn(result, collect_load(s, clone)));
             }
             ModuleType::CPU => {
-                tokio::spawn(collect_cpu(s, self.clone())).await??;
+                tokio::spawn(spawn(result, collect_cpu(s, clone)));
             }
             ModuleType::Memory => {
-                tokio::spawn(collect_memory(s, self.clone())).await??;
+                tokio::spawn(spawn(result, collect_memory(s, clone)));
             }
             ModuleType::Disk => {
-                tokio::spawn(collect_disk(s, self.clone())).await??;
+                tokio::spawn(spawn(result, collect_disk(s, clone)));
             }
-            _ => {}
+            _ => return Ok(()),
         }
 
         Ok(())

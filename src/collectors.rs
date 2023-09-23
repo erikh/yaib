@@ -111,14 +111,10 @@ pub async fn collect_static(s: UnboundedSender<Collection>, item: ConfigItem) ->
     })?)
 }
 
-pub async fn collect_time(
-    s: UnboundedSender<Collection>,
-    item: ConfigItem,
-    now: chrono::DateTime<chrono::Local>,
-) -> Result<()> {
+pub async fn collect_time(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
     Ok(s.send(Collection {
         name: item.name,
-        collection_type: CollectionType::Time(now),
+        collection_type: CollectionType::Time(chrono::Local::now()),
         value: item.value,
         format: item.format,
     })?)
