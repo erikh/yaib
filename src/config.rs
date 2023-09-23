@@ -109,7 +109,7 @@ impl ConfigItem {
         match self.typ {
             ModuleType::Static => {
                 if self.value.is_some() {
-                    tokio::spawn(collect_static(s, self.clone()));
+                    tokio::spawn(collect_static(s, self.clone())).await??;
                 } else {
                     return Err(anyhow!(
                         "Static self.clone() '{}' must have a value",
@@ -118,19 +118,19 @@ impl ConfigItem {
                 }
             }
             ModuleType::Time => {
-                tokio::spawn(collect_time(s, self.clone(), now));
+                tokio::spawn(collect_time(s, self.clone(), now)).await??;
             }
             ModuleType::Load => {
-                tokio::spawn(collect_load(s, self.clone()));
+                tokio::spawn(collect_load(s, self.clone())).await??;
             }
             ModuleType::CPU => {
-                tokio::spawn(collect_cpu(s, self.clone()));
+                tokio::spawn(collect_cpu(s, self.clone())).await??;
             }
             ModuleType::Memory => {
-                tokio::spawn(collect_memory(s, self.clone()));
+                tokio::spawn(collect_memory(s, self.clone())).await??;
             }
             ModuleType::Disk => {
-                tokio::spawn(collect_disk(s, self.clone()));
+                tokio::spawn(collect_disk(s, self.clone())).await??;
             }
             _ => {}
         }

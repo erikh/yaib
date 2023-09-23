@@ -16,4 +16,3 @@ fancy-duration = { version = "^0.5", default-features = false, features = [ "chr
 tokio = { version = "^1", features = [ "full" ] }
 mprober-lib = "^0.1"
 pretty-bytes = "^0.2"
-nix = { version = "^0.27", features = [ "fs" ] }

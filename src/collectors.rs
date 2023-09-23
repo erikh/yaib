@@ -172,21 +172,33 @@ pub async fn collect_memory(s: UnboundedSender<Collection>, item: ConfigItem) ->
 }
 
 pub async fn collect_disk(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
-    if item.value.is_none() {
-        return Err(anyhow!(
+    if let Some(value) = item.value {
+        let vols = mprober_lib::volume::get_volumes()?;
+        let mut target: Option<mprober_lib::volume::Volume> = None;
+
+        for vol in vols {
+            if vol.points.contains(&value) {
+                target = Some(vol);
+                break;
+            }
+        }
+
+        if let Some(target) = target {
+            Ok(s.send(Collection {
+                name: item.name,
+                collection_type: CollectionType::Disk {
+                    total: target.size as usize,
+                    usage: target.used as usize,
+                },
+                value: Some(value),
+                format: item.format,
+            })?)
+        } else {
+            Err(anyhow!("Volume could not be found"))
+        }
+    } else {
+        Err(anyhow!(
             "Value must be provided and must point at a mount point"
-        ));
+        ))
     }
-
-    let stat = nix::sys::statvfs::statvfs(&std::path::PathBuf::from(&item.value.clone().unwrap()))?;
-
-    Ok(s.send(Collection {
-        name: item.name,
-        collection_type: CollectionType::Disk {
-            total: (stat.blocks() * stat.block_size()) as usize,
-            usage: ((stat.blocks() - stat.blocks_available()) * stat.block_size()) as usize,
-        },
-        value: item.value,
-        format: item.format,
-    })?)
 }
