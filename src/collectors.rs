@@ -24,46 +24,40 @@ impl Collection {
         self.collection_type.clone()
     }
 
-    fn get_format(&self) -> String {
-        match self.collection_type {
-            CollectionType::Static => self.value.clone().unwrap(),
-            CollectionType::Time(t) => t
-                .format(&self.format.clone().unwrap_or("%m/%d %H:%M".to_string()))
-                .to_string(),
-            CollectionType::Load(..) => self.format.clone().unwrap_or("%1, %5, %15".to_string()),
-            CollectionType::CPU { .. } => self
-                .format
-                .clone()
-                .unwrap_or("cpus: %count, usage: %usage".to_string()),
-            CollectionType::Memory { .. } | CollectionType::Disk { .. } => self
-                .format
-                .clone()
-                .unwrap_or("total: %total, usage: %usage".to_string()),
-        }
-    }
-
-    fn get_rules(&self) -> Rules {
-        match self.collection_type {
-            CollectionType::Static | CollectionType::Time(_) => Rules::default(),
-            CollectionType::Load(one, five, fifteen) => {
+    fn get_formatter(&self) -> Format {
+        let pair = match self.collection_type {
+            CollectionType::Static => (self.value.clone().unwrap(), Rules::default()),
+            CollectionType::Time(t) => (
+                t.format(&self.format.clone().unwrap_or("%m/%d %H:%M".to_string()))
+                    .to_string(),
+                Rules::default(),
+            ),
+            CollectionType::Load(one, five, fifteen) => (
+                self.format.clone().unwrap_or("%1, %5, %15".to_string()),
                 vec![
                     ("%1", one.to_string()),
                     ("%5", five.to_string()),
                     ("%15", fifteen.to_string()),
-                ]
-            }
-            CollectionType::CPU { count, usage } => {
+                ],
+            ),
+            CollectionType::CPU { count, usage } => (
+                self.format
+                    .clone()
+                    .unwrap_or("cpus: %count, usage: %usage".to_string()),
                 vec![
                     ("%count", count.to_string()),
                     ("%usage", format!("{:.2}", usage)),
-                ]
-            }
+                ],
+            ),
             CollectionType::Memory {
                 total,
                 usage,
                 swap_total,
                 swap_usage,
-            } => {
+            } => (
+                self.format
+                    .clone()
+                    .unwrap_or("total: %total, usage: %usage".to_string()),
                 vec![
                     ("%total", convert(total as f64)),
                     ("%usage", convert(usage as f64)),
@@ -77,9 +71,12 @@ impl Collection {
                         "%pct_swap",
                         format!("{:.1}", (swap_usage as f64 / swap_total as f64) * 100.0),
                     ),
-                ]
-            }
-            CollectionType::Disk { total, usage } => {
+                ],
+            ),
+            CollectionType::Disk { total, usage } => (
+                self.format
+                    .clone()
+                    .unwrap_or("total: %total, usage: %usage".to_string()),
                 vec![
                     ("%total", convert(total as f64)),
                     ("%usage", convert(usage as f64)),
@@ -87,16 +84,16 @@ impl Collection {
                         "%pct",
                         format!("{:.1}", (usage as f64 / total as f64) * 100.0),
                     ),
-                ]
-            }
-        }
+                ],
+            ),
+        };
+        Format::new(pair.0, pair.1)
     }
 
     pub fn to_block(&self) -> Block {
-        let formatter = Format::new(self.get_format(), self.get_rules());
         let mut block = Block::default();
 
-        block.full_text = formatter.format();
+        block.full_text = self.get_formatter().format();
         block.name = Some(self.name());
 
         block
