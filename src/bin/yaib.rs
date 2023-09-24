@@ -28,16 +28,20 @@ async fn main() -> Result<()> {
     let config = Config::load(config_file())?;
     let bar = Bar::default();
     let mut b = bar.clone();
-    let (s, r) = unbounded_channel();
+    let (s_collection, r_collection) = unbounded_channel();
     let (s_result, r_result) = unbounded_channel();
     let c = config.clone();
 
-    tokio::spawn(async move { b.emit_status(c, std::io::stdout(), r).await.unwrap() });
+    tokio::spawn(async move {
+        b.emit_status(c, std::io::stdout(), r_collection)
+            .await
+            .unwrap()
+    });
     tokio::spawn(async move { manage_errors(r_result).await });
 
     loop {
         config
-            .launch_collectors(s.clone(), s_result.clone())
+            .launch_collectors(s_collection.clone(), s_result.clone())
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }

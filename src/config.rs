@@ -80,8 +80,6 @@ pub enum ModuleType {
     #[serde(rename = "time", alias = "clock")]
     #[default]
     Time,
-    #[serde(rename = "volume", alias = "audio")]
-    Volume,
 }
 
 impl From<CollectionType> for ModuleType {
@@ -93,7 +91,6 @@ impl From<CollectionType> for ModuleType {
             CollectionType::Memory { .. } => Self::Memory,
             CollectionType::Load(..) => Self::Load,
             CollectionType::Time(..) => Self::Time,
-            CollectionType::Volume(..) => Self::Volume,
         }
     }
 }
@@ -147,7 +144,6 @@ impl ConfigItem {
             ModuleType::Disk => {
                 tokio::spawn(spawn(result, collect_disk(s, clone)));
             }
-            _ => return Ok(()),
         }
 
         Ok(())

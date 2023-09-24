@@ -70,7 +70,6 @@ impl Collection {
                 let format = format.replace("%usage", &convert(*usage as f64));
                 block.full_text = format
             }
-            _ => {}
         }
 
         block.name = Some(self.name());
@@ -99,7 +98,6 @@ pub enum CollectionType {
     },
     Load(f64, f64, f64),
     Time(chrono::DateTime<chrono::Local>),
-    Volume(usize),
 }
 
 pub async fn collect_static(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
