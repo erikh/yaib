@@ -12,11 +12,20 @@ async fn manage_errors(mut r: UnboundedReceiver<Result<()>>) {
     }
 }
 
+fn config_file() -> PathBuf {
+    std::env::var("YAIB_CONFIG")
+        .map(|x| x.into())
+        .unwrap_or_else(|_| {
+            dirs::config_local_dir()
+                .map(|x| x.join("yaib"))
+                .unwrap_or(dirs::home_dir().unwrap_or("/".into()))
+                .join("yaib.config.yaml")
+        })
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    let config = Config::load(PathBuf::from(
-        "/home/erikh/src/github.com/erikh/yaib/test.yaml",
-    ))?;
+    let config = Config::load(config_file())?;
     let bar = Bar::default();
     let mut b = bar.clone();
     let (s, r) = unbounded_channel();

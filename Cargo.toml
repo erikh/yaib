@@ -12,7 +12,8 @@ serde_json = "^1"
 serde_yaml = "^0.9"
 anyhow = "^1"
 chrono = "^0.4"
-fancy-duration = { version = "^0.5", default-features = false, features = [ "chrono" ] }
+fancy-duration = { version = "^0.6", features = [ "chrono" ] }
 tokio = { version = "^1", features = [ "full" ] }
 mprober-lib = "^0.1"
 pretty-bytes = "^0.2"
+dirs = "^5"
