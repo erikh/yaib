@@ -7,7 +7,7 @@ displaying statistics and other things you'd like to display.
 
 yaib is very immature at this writing. Lots of things you want won't be here.
 
-<img style="height: 100px; width: auto" src="example.png" />
+<img style="height: 50px; width: auto" src="example.png" />
 
 ## Installation
 
