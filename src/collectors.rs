@@ -59,6 +59,14 @@ impl Collection {
                 let format = format.replace("%usage", &convert(*usage as f64));
                 let format = format.replace("%swap_total", &convert(*swap_total as f64));
                 let format = format.replace("%swap_usage", &convert(*swap_usage as f64));
+                let format = format.replace(
+                    "%pct",
+                    &format!("{:.1}", (*usage as f64 / *total as f64) * 100.0),
+                );
+                let format = format.replace(
+                    "%pct_swap",
+                    &format!("{:.1}", (*swap_usage as f64 / *swap_total as f64) * 100.0),
+                );
                 block.full_text = format
             }
             CollectionType::Disk { total, usage } => {
@@ -68,6 +76,10 @@ impl Collection {
                     .unwrap_or("total: %total, usage: %usage".to_string());
                 let format = format.replace("%total", &convert(*total as f64));
                 let format = format.replace("%usage", &convert(*usage as f64));
+                let format = format.replace(
+                    "%pct",
+                    &format!("{:.1}", (*usage as f64 / *total as f64) * 100.0),
+                );
                 block.full_text = format
             }
         }
