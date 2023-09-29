@@ -52,7 +52,7 @@ should appear!
 
 There is an [example](example.yaml) configuration file. This configuration file
 can either be specified by setting `YAIB_CONFIG` in the environment, or by
-making a file in `$XDG_CONFIG_HOME/yaib.config.yaml`.
+making a file in `$XDG_CONFIG_HOME/yaib/yaib.config.yaml`.
 
 The configuration file looks like this:
 
