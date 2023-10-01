@@ -4,17 +4,29 @@ pages:
       value: "yaib rules"
     - name: cpu
       type: cpu
-      format: "CPU: %usage%"
+      format: "⚛: %usage%"
+      urgency: [25, 50, 80]
+      urgency_colors: ["#66FF66", "#FFFF44", "#FF6666"]
+      icon: "⚛"
     - name: disk
       type: disk
       value: "/"
-      format: "Disk: T: %total, U: %usage"
+      format: "🖴  T: %total, U: %usage"
+      urgency: [25, 50, 80]
+      urgency_colors: ["#66FF66", "#FFFF44", "#FF6666"]
+      icon: "🖴"
     - name: memory
       type: memory
-      format: "Mem: T: %total, U: %usage"
+      format: "🎟: T: %total, %U: %pct%"
+      urgency: [25, 50, 80]
+      urgency_colors: ["#66FF66", "#FFFF44", "#FF6666"]
+      icon: "🎟"
     - name: load
       type: load
-      format: "1m Load: %1"
+      format: "🏋: %1"
+      urgency: [25, 50, 80]
+      urgency_colors: ["#66FF66", "#FFFF44", "#FF6666"]
+      icon: "🏋"
     - name: time
       type: time
       format: "%a %m/%d %I:%M%P"
