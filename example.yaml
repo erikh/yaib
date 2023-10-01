@@ -2,6 +2,10 @@ pages:
   - - name: static
       type: static
       value: "yaib rules"
+    - name: music
+      type: music
+      format: "🎶: %artist - %title [%time]"
+      icon: "🎶"
     - name: cpu
       type: cpu
       format: "⚛: %usage%"

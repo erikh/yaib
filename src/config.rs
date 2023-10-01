@@ -80,6 +80,8 @@ pub enum ModuleType {
     #[serde(rename = "time", alias = "clock")]
     #[default]
     Time,
+    #[serde(rename = "music")]
+    Music,
 }
 
 impl From<CollectionType> for ModuleType {
@@ -91,6 +93,7 @@ impl From<CollectionType> for ModuleType {
             CollectionType::Memory { .. } => Self::Memory,
             CollectionType::Load(..) => Self::Load,
             CollectionType::Time(..) => Self::Time,
+            CollectionType::Music { .. } => Self::Music,
         }
     }
 }
@@ -146,6 +149,9 @@ impl ConfigItem {
             }
             ModuleType::Disk => {
                 tokio::spawn(spawn(result, collect_disk(s, clone)));
+            }
+            ModuleType::Music => {
+                tokio::spawn(spawn(result, collect_music(s, clone)));
             }
         }
 

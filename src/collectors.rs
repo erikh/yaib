@@ -26,7 +26,7 @@ impl Collection {
     }
 
     fn get_formatter(&self) -> Format {
-        let pair = match self.collection_type {
+        let pair = match &self.collection_type {
             CollectionType::Static => (self.value.clone().unwrap(), Rules::default()),
             CollectionType::Time(t) => (
                 t.format(&self.format.clone().unwrap_or("%m/%d %H:%M".to_string()))
@@ -60,17 +60,17 @@ impl Collection {
                     .clone()
                     .unwrap_or("total: %total, usage: %usage".to_string()),
                 vec![
-                    ("%total", convert(total as f64)),
-                    ("%usage", convert(usage as f64)),
-                    ("%swap_total", convert(swap_total as f64)),
-                    ("%swap_usage", convert(swap_usage as f64)),
+                    ("%total", convert(*total as f64)),
+                    ("%usage", convert(*usage as f64)),
+                    ("%swap_total", convert(*swap_total as f64)),
+                    ("%swap_usage", convert(*swap_usage as f64)),
                     (
                         "%pct",
-                        format!("{:.1}", (usage as f64 / total as f64) * 100.0),
+                        format!("{:.1}", (*usage as f64 / *total as f64) * 100.0),
                     ),
                     (
                         "%pct_swap",
-                        format!("{:.1}", (swap_usage as f64 / swap_total as f64) * 100.0),
+                        format!("{:.1}", (*swap_usage as f64 / *swap_total as f64) * 100.0),
                     ),
                 ],
             ),
@@ -79,11 +79,34 @@ impl Collection {
                     .clone()
                     .unwrap_or("total: %total, usage: %usage".to_string()),
                 vec![
-                    ("%total", convert(total as f64)),
-                    ("%usage", convert(usage as f64)),
+                    ("%total", convert(*total as f64)),
+                    ("%usage", convert(*usage as f64)),
                     (
                         "%pct",
-                        format!("{:.1}", (usage as f64 / total as f64) * 100.0),
+                        format!("{:.1}", (*usage as f64 / *total as f64) * 100.0),
+                    ),
+                ],
+            ),
+            CollectionType::Music {
+                artist,
+                title,
+                pct_played,
+                time_played,
+            } => (
+                self.format
+                    .clone()
+                    .unwrap_or("music: %artist - %title".to_string()),
+                vec![
+                    ("%artist", artist.clone()),
+                    ("%title", title.clone()),
+                    ("%pct_played", pct_played.to_string()),
+                    (
+                        "%time",
+                        format!(
+                            "{}:{:0>2}",
+                            chrono::Duration::seconds(*time_played as i64).num_minutes(),
+                            chrono::Duration::seconds((time_played % 60) as i64).num_seconds()
+                        ),
                     ),
                 ],
             ),
@@ -107,6 +130,12 @@ impl Collection {
                 ((usage as f64 / total as f64) * 100.0).floor() as u64
             }
             CollectionType::Time(..) => 0,
+            CollectionType::Music {
+                artist: _,
+                title: _,
+                pct_played,
+                time_played: _,
+            } => pct_played as u64,
         };
 
         let urgency = if let Some(colors) = &self.item.urgency_colors {
@@ -171,6 +200,12 @@ pub enum CollectionType {
     },
     Load(f64, f64, f64),
     Time(chrono::DateTime<chrono::Local>),
+    Music {
+        artist: String,
+        title: String,
+        pct_played: usize,
+        time_played: usize,
+    },
 }
 
 pub async fn collect_static(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
@@ -280,4 +315,32 @@ pub async fn collect_disk(s: UnboundedSender<Collection>, item: ConfigItem) -> R
             "Value must be provided and must point at a mount point"
         ))
     }
+}
+
+pub async fn collect_music(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
+    if let Ok(player) = mpris::PlayerFinder::new()?.find_active() {
+        if player.is_running() {
+            if let Ok(meta) = player.get_metadata() {
+                let clone = item.clone();
+                let position = player.get_position().unwrap_or_default();
+                s.send(Collection {
+                    name: item.name,
+                    collection_type: CollectionType::Music {
+                        artist: meta.artists().map_or_else(String::new, |x| x.join(", ")),
+                        title: meta.title().unwrap_or_default().to_string(),
+                        pct_played: meta.length().map_or_else(
+                            || 100,
+                            |length| (position.as_secs() / length.as_secs()) as usize,
+                        ),
+                        time_played: position.as_secs() as usize,
+                    },
+                    format: item.format,
+                    item: clone,
+                    value: None,
+                })?;
+            }
+        }
+    }
+
+    Ok(())
 }

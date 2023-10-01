@@ -79,13 +79,20 @@ Field descriptions follow:
         values. If not provided, it will display the formatted content always.
     -   `urgency` is a 3-element tuple of values that are all under 100. They
         correspond to urgency values, green/yellow/red. Not supported on static
-        values. When under the minimum, the default text color is used.
+        or music values. When under the minimum, the default text color is
+        used.
     -   `urgency_colors` is a 3-element tuple of `#rrggbb` values. These values
         are used when the urgency thresholds are set.
     -   `type` is the type of block. `value` and `format` are dependent on this
         type, so they will be specified with the type below:
         -   `static` just displays a static string set in the `value`. No
             formatting is applied.
+        -   `music` displays several options for listing the current music track
+            playing via MPRIS (e.g., spotify, xmms). No value is used.
+            -   `%artist` is the current artist
+            -   `%title` is the current track title
+            -   `%pct_played` is the whole number percentage of how far along in the track you are.
+            -   `%total_played` is the `minute:second` time well suited for regular updates.
         -   `cpu` are CPU metrics. Both `%count` (number of CPUs) and `%usage`
             are available as format strings.
         -   `disk` are storage metrics. The `value` is a mount point.
