@@ -90,6 +90,13 @@ Field descriptions follow:
     in the future. Merely fill out the first page via a YAML list of block
     items with the following properties:
     -   `name` is the name of the block. It is required, and must be unique for all blocks.
+    -   `icon` is the short initial clickable content. Not supported on static
+        values. If not provided, it will display the formatted content always.
+    -   `urgency` is a 3-element tuple of values that are all under 100. They
+        correspond to urgency values, green/yellow/red. Not supported on static
+        values. When under the minimum, the default text color is used.
+    -   `urgency_colors` is a 3-element tuple of `#rrggbb` values. These values
+        are used when the urgency thresholds are set.
     -   `type` is the type of block. `value` and `format` are dependent on this
         type, so they will be specified with the type below:
         -   `static` just displays a static string set in the `value`. No
