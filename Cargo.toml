@@ -17,3 +17,4 @@ tokio = { version = "^1", features = [ "full" ] }
 mprober-lib = "^0.1"
 pretty-bytes = "^0.2"
 dirs = "^5"
+num_cpus = "^1"

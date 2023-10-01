@@ -13,6 +13,7 @@ pub struct Collection {
     value: Option<String>,
     format: Option<String>,
     collection_type: CollectionType,
+    item: crate::config::ConfigItem,
 }
 
 impl Collection {
@@ -93,6 +94,47 @@ impl Collection {
     pub fn to_block(&self) -> Block {
         let mut block = Block::default();
 
+        let pct = match self.collection_type {
+            CollectionType::Static => 0,
+            CollectionType::CPU { count: _, usage } => usage.floor() as u64,
+            CollectionType::Disk { total, usage } => {
+                ((usage as f64 / total as f64) * 100.0).floor() as u64
+            }
+            CollectionType::Load(one, ..) => {
+                ((one / num_cpus::get() as f64) * 100.0).floor() as u64
+            }
+            CollectionType::Memory { total, usage, .. } => {
+                ((usage as f64 / total as f64) * 100.0).floor() as u64
+            }
+            CollectionType::Time(..) => 0,
+        };
+
+        let urgency = if let Some(colors) = &self.item.urgency_colors {
+            if let Some(urgency) = self.item.urgency {
+                if pct > urgency.0.into() {
+                    if pct > urgency.1.into() {
+                        if pct > urgency.2.into() {
+                            Some(colors.2.clone())
+                        } else {
+                            Some(colors.1.clone())
+                        }
+                    } else {
+                        Some(colors.0.clone())
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(urgency) = urgency {
+            block.color = Some(urgency);
+        }
+
         block.full_text = self.get_formatter().format();
         block.name = Some(self.name());
 
@@ -123,31 +165,37 @@ pub enum CollectionType {
 }
 
 pub async fn collect_static(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
+    let clone = item.clone();
     Ok(s.send(Collection {
         name: item.name,
         collection_type: CollectionType::Static,
         value: item.value,
         format: item.format,
+        item: clone,
     })?)
 }
 
 pub async fn collect_time(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
+    let clone = item.clone();
     Ok(s.send(Collection {
         name: item.name,
         collection_type: CollectionType::Time(chrono::Local::now()),
         value: item.value,
         format: item.format,
+        item: clone,
     })?)
 }
 
 pub async fn collect_load(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
     let avg = mprober_lib::load_average::get_load_average()?;
+    let clone = item.clone();
 
     Ok(s.send(Collection {
         name: item.name,
         collection_type: CollectionType::Load(avg.one, avg.five, avg.fifteen),
         value: item.value,
         format: item.format,
+        item: clone,
     })?)
 }
 
@@ -159,6 +207,7 @@ pub async fn collect_cpu(s: UnboundedSender<Collection>, item: ConfigItem) -> Re
 
     let count = avg.len();
     let avg = avg.iter().fold(0.0, |acc, item| item + acc) / count as f64;
+    let clone = item.clone();
 
     Ok(s.send(Collection {
         name: item.name,
@@ -168,11 +217,13 @@ pub async fn collect_cpu(s: UnboundedSender<Collection>, item: ConfigItem) -> Re
         },
         value: item.value,
         format: item.format,
+        item: clone,
     })?)
 }
 
 pub async fn collect_memory(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
     let mem = mprober_lib::memory::free()?;
+    let clone = item.clone();
 
     Ok(s.send(Collection {
         name: item.name,
@@ -184,10 +235,12 @@ pub async fn collect_memory(s: UnboundedSender<Collection>, item: ConfigItem) ->
         },
         value: item.value,
         format: item.format,
+        item: clone,
     })?)
 }
 
 pub async fn collect_disk(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
+    let clone = item.clone();
     if let Some(value) = item.value {
         let vols = mprober_lib::volume::get_volumes()?;
         let mut target: Option<mprober_lib::volume::Volume> = None;
@@ -208,6 +261,7 @@ pub async fn collect_disk(s: UnboundedSender<Collection>, item: ConfigItem) -> R
                 },
                 value: Some(value),
                 format: item.format,
+                item: clone,
             })?)
         } else {
             Err(anyhow!("Volume could not be found"))

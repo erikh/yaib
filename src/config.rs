@@ -102,6 +102,8 @@ pub struct ConfigItem {
     pub typ: ModuleType,
     pub value: Option<String>,
     pub format: Option<String>,
+    pub urgency: Option<(u8, u8, u8)>,
+    pub urgency_colors: Option<(String, String, String)>,
 }
 
 async fn spawn(
