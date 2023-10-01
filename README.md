@@ -65,32 +65,6 @@ There is an [example](example.yaml) configuration file. This configuration file
 can either be specified by setting `YAIB_CONFIG` in the environment, or by
 making a file in `$XDG_CONFIG_HOME/yaib/yaib.config.yaml`.
 
-The configuration file looks like this:
-
-```yaml
-update_interval: "1s"
-pages:
-    - - name: static
-        type: static
-        value: "yaib rules"
-      - name: cpu
-        type: cpu
-        format: "CPU: %usage%"
-      - name: disk
-        type: disk
-        value: "/"
-        format: "Disk: T: %total, U: %usage"
-      - name: memory
-        type: memory
-        format: "Mem: T: %total, U: %usage"
-      - name: load
-        type: load
-        format: "1m Load: %1"
-      - name: time
-        type: time
-        format: "%a %m/%d %I:%M%P"
-```
-
 Field descriptions follow:
 
 -   `update_interval` is the amount of time to wait before polling the system,
