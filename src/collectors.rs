@@ -91,7 +91,7 @@ impl Collection {
         Format::new(pair.0, pair.1)
     }
 
-    pub fn to_block(&self) -> Block {
+    pub async fn to_block(&self, state: crate::state::ProtectedState) -> Block {
         let mut block = Block::default();
 
         let pct = match self.collection_type {
@@ -135,8 +135,17 @@ impl Collection {
             block.color = Some(urgency);
         }
 
-        block.full_text = self.get_formatter().format();
         block.name = Some(self.name());
+
+        if let Some(icon) = &self.item.icon {
+            if state.lock().await.opened.contains(&self.name()) {
+                block.full_text = self.get_formatter().format();
+            } else {
+                block.full_text = icon.clone()
+            }
+        } else {
+            block.full_text = self.get_formatter().format();
+        }
 
         block
     }

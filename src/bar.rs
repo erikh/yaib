@@ -7,9 +7,17 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 #[derive(Debug, Clone, Default)]
 pub struct Bar {
     state: BTreeMap<String, Block>,
+    internal_state: crate::state::ProtectedState,
 }
 
 impl Bar {
+    pub fn new(internal_state: crate::state::ProtectedState) -> Self {
+        Self {
+            state: BTreeMap::default(),
+            internal_state,
+        }
+    }
+
     pub async fn write_blocks(
         &self,
         mut w: impl std::io::Write + Send + 'static,
@@ -34,6 +42,7 @@ impl Bar {
             &mut w,
             &Header {
                 version: 1,
+                click_events: Some(true),
                 ..Default::default()
             },
         )?;
@@ -48,7 +57,7 @@ impl Bar {
         let mut last_sent = Vec::new();
 
         while let Some(collection) = data.recv().await {
-            let block = collection.to_block();
+            let block = collection.to_block(self.internal_state.clone()).await;
             self.state.insert(collection.name(), block);
 
             let now = chrono::Local::now();
@@ -123,9 +132,16 @@ pub struct Block {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Click {
-    name: String,
-    instance: String,
-    x: u16,
-    y: u16,
-    button: u16,
+    pub name: String,
+    pub instance: Option<String>,
+    pub x: u16,
+    pub y: u16,
+    pub button: u16,
+    pub relative_x: u16,
+    pub relative_y: u16,
+    pub output_x: u16,
+    pub output_y: u16,
+    pub width: u16,
+    pub height: u16,
+    pub modifiers: Vec<String>,
 }

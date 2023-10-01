@@ -104,6 +104,7 @@ pub struct ConfigItem {
     pub format: Option<String>,
     pub urgency: Option<(u8, u8, u8)>,
     pub urgency_colors: Option<(String, String, String)>,
+    pub icon: Option<String>,
 }
 
 async fn spawn(
