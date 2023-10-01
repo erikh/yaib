@@ -1,7 +1,9 @@
 use anyhow::Result;
 use std::path::PathBuf;
-use tokio::io::AsyncReadExt;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use tokio::{
+    io::AsyncReadExt,
+    sync::mpsc::{unbounded_channel, UnboundedReceiver},
+};
 use yaib::{bar::Bar, config::Config, state::ProtectedState};
 
 async fn manage_errors(mut r: UnboundedReceiver<Result<()>>) {
@@ -25,29 +27,25 @@ fn config_file() -> PathBuf {
 }
 
 async fn manage_clicks(state: ProtectedState) {
-    let mut first = true;
     let mut v = Vec::with_capacity(4096);
     while let Ok(_) = tokio::io::stdin().read_buf(&mut v).await {
-        if first {
-            if v.len() > 1 {
-                v = v[1..v.len()].to_vec();
-                first = false;
-                continue;
-            } else {
-                continue;
-            }
+        let mut lock = state.lock().await;
+
+        if v.len() > 2 && v[0] as char == '[' && v[1] as char == '\n' {
+            v = v[1..v.len()].to_vec();
         }
 
-        if v[v.len() - 1] as char == '\n' {
-            if v.len() > 1 && !first {
+        if !v.is_empty() && v[v.len() - 1] as char == '\n' {
+            if v[0] as char == ',' || v[0] as char == '[' {
                 v = v[1..v.len() - 1].to_vec();
+            } else {
+                v = v[0..v.len() - 1].to_vec();
             }
         } else {
             continue;
         }
 
         if let Ok(click) = serde_json::from_slice::<yaib::bar::Click>(&v) {
-            let mut lock = state.lock().await;
             if lock.opened.contains(&click.name) {
                 let mut v = Vec::new();
                 for i in &lock.opened {
@@ -60,7 +58,6 @@ async fn manage_clicks(state: ProtectedState) {
             } else {
                 lock.opened.push(click.name);
             }
-            drop(lock);
             v = Vec::new();
         }
     }
