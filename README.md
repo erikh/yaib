@@ -7,7 +7,18 @@ displaying statistics and other things you'd like to display.
 
 yaib is very immature at this writing. Lots of things you want won't be here.
 
-<img style="height: 25px; width: auto" src="example.png" />
+One feature that is someone novel about yaib is that it is expandable. Each
+block has an `icon` value which can then be clicked on to expand it. Combine it
+with the urgency coloring values, and you don't have to see text updating all
+day; just the colors when it matters.
+
+Here's the expanded Disk section in the default config:
+
+<img style="height: 25px; width: auto" src="one.png" />
+
+And here it is collapsed (just click):
+
+<img style="height: 25px; width: auto" src="two.png" />
 
 ## Installation
 
