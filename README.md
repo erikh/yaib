@@ -97,6 +97,9 @@ Field descriptions follow:
         are used when the urgency thresholds are set.
     -   `type` is the type of block. `value` and `format` are dependent on this
         type, so they will be specified with the type below:
+        -   `dynamic` is only for types which are updated by the unix socket
+            (see below). It carries no value and communicates no urgency and
+            has no format.
         -   `static` just displays a static string set in the `value`. No
             formatting is applied.
         -   `music` displays several options for listing the current music track
@@ -128,12 +131,21 @@ Field descriptions follow:
 
 ## Unix Socket
 
+**NOTE:** This layer is likely to be changed dramatically in the future. It is
+recommended that if you use this feature, you use it through `yaib` commands,
+and not writing to the socket directly, as the protocol is certain to change.
+
 You can write blocks using the JSON format in the [i3 protocol, Section
 2.2](https://i3wm.org/docs/i3bar-protocol.html) block format. One block per
 write; use `yaib write-block '<block json>'` to write directly to the socket.
 The socket is also located at `/tmp/yaib.sock`; only the most recent copy of
 `yaib` running will respond to it, but you can use this with `nc` et al to
 control it. Just barf a Block JSON at the socket.
+
+Whatever the block's `name` value is set to will replace the block in the bar.
+If this block is not of a `dynamic` type in the configuration, it will not
+persist and be overwritten by new collection data in the next iteration (this
+behavior is expected to change in the future).
 
 ## License
 
