@@ -4,3 +4,4 @@ pub mod config;
 pub mod formatter;
 pub mod input;
 pub mod state;
+pub mod unix;

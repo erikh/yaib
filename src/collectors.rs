@@ -28,6 +28,7 @@ impl Collection {
     fn get_formatter(&self) -> Format {
         let pair = match &self.collection_type {
             CollectionType::Static => (self.value.clone().unwrap(), Rules::default()),
+            CollectionType::Dynamic => (String::new(), Rules::default()),
             CollectionType::Time(t) => (
                 t.format(&self.format.clone().unwrap_or("%m/%d %H:%M".to_string()))
                     .to_string(),
@@ -119,6 +120,7 @@ impl Collection {
 
         let pct = match self.collection_type {
             CollectionType::Static => 0,
+            CollectionType::Dynamic => 0,
             CollectionType::CPU { count: _, usage } => usage.floor() as u64,
             CollectionType::Disk { total, usage } => {
                 ((usage as f64 / total as f64) * 100.0).floor() as u64
@@ -184,6 +186,7 @@ impl Collection {
 #[derive(Debug, Clone)]
 pub enum CollectionType {
     Static,
+    Dynamic,
     CPU {
         count: usize,
         usage: f64,

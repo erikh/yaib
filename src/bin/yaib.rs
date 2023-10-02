@@ -1,7 +1,9 @@
 use anyhow::Result;
 use std::path::PathBuf;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
-use yaib::{bar::Bar, config::Config, input::manage_clicks, state::ProtectedState};
+use yaib::{
+    bar::Bar, config::Config, input::manage_clicks, state::ProtectedState, unix::manage_unix_socket,
+};
 
 async fn manage_errors(mut r: UnboundedReceiver<Result<()>>) {
     while let Some(error) = r.recv().await {
@@ -28,12 +30,14 @@ async fn main() -> Result<()> {
     let config = Config::load(config_file())?;
     let (s_collection, r_collection) = unbounded_channel();
     let (s_result, r_result) = unbounded_channel();
+    let (s_blocks, r_blocks) = unbounded_channel();
     let c = config.clone();
     let state = ProtectedState::default();
     let mut bar = Bar::new(state.clone());
 
+    tokio::spawn(async move { manage_unix_socket(s_blocks).await });
     tokio::spawn(async move {
-        bar.emit_status(c, std::io::stdout(), r_collection)
+        bar.emit_status(c, std::io::stdout(), r_collection, r_blocks)
             .await
             .unwrap()
     });

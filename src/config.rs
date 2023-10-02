@@ -69,6 +69,8 @@ impl ConfigPage {
 pub enum ModuleType {
     #[serde(rename = "static")]
     Static,
+    #[serde(rename = "dynamic")]
+    Dynamic,
     #[serde(rename = "cpu")]
     CPU,
     #[serde(rename = "disk", alias = "hdd")]
@@ -88,6 +90,7 @@ impl From<CollectionType> for ModuleType {
     fn from(value: CollectionType) -> Self {
         match value {
             CollectionType::Static => Self::Static,
+            CollectionType::Dynamic => Self::Dynamic,
             CollectionType::CPU { .. } => Self::CPU,
             CollectionType::Disk { .. } => Self::Disk,
             CollectionType::Memory { .. } => Self::Memory,
@@ -135,6 +138,7 @@ impl ConfigItem {
                     ));
                 }
             }
+            ModuleType::Dynamic => { /* no collector is launched for dynamic */ }
             ModuleType::Time => {
                 tokio::spawn(spawn(result, collect_time(s, clone)));
             }
