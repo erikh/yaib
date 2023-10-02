@@ -28,6 +28,14 @@ And here it is collapsed (just click):
 
 ## Installation
 
+Release:
+
+```
+cargo install yaib
+```
+
+Development (recommended):
+
 ```
 cargo install --git https://github.com/erikh/yaib
 ```
