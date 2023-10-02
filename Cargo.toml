@@ -2,6 +2,12 @@
 name = "yaib"
 version = "0.1.0"
 edition = "2021"
+description = "yaib is Yet Another i3 Bar, with a focus on displaying lots of data"
+authors = ["Erik Hollensbe <git@hollensbe.org>"]
+license = "MIT"
+homepage = "https://github.com/erikh/yaib"
+repository = "https://github.com/erikh/yaib"
+keywords = [ "i3", "status", "bar" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -19,3 +25,9 @@ pretty-bytes = "^0.2"
 dirs = "^5"
 num_cpus = "^1"
 mpris = "^2"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 24
+opt-level = 3
