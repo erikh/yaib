@@ -4,7 +4,11 @@ use tokio::{
     io::AsyncReadExt,
     sync::mpsc::{unbounded_channel, UnboundedReceiver},
 };
-use yaib::{bar::Bar, config::Config, state::ProtectedState};
+use yaib::{
+    bar::{Bar, NAME_PAGE_DOWN, NAME_PAGE_UP},
+    config::Config,
+    state::ProtectedState,
+};
 
 async fn manage_errors(mut r: UnboundedReceiver<Result<()>>) {
     while let Some(error) = r.recv().await {
@@ -26,7 +30,7 @@ fn config_file() -> PathBuf {
         })
 }
 
-async fn manage_clicks(state: ProtectedState) {
+async fn manage_clicks(state: ProtectedState, config: Config) {
     let mut v = Vec::with_capacity(4096);
     while let Ok(_) = tokio::io::stdin().read_buf(&mut v).await {
         let mut lock = state.lock().await;
@@ -46,17 +50,31 @@ async fn manage_clicks(state: ProtectedState) {
         }
 
         if let Ok(click) = serde_json::from_slice::<yaib::bar::Click>(&v) {
-            if lock.opened.contains(&click.name) {
-                let mut v = Vec::new();
-                for i in &lock.opened {
-                    if *i != click.name {
-                        v.push(i.clone())
+            match click.name.as_str() {
+                NAME_PAGE_UP => {
+                    if lock.page < config.pages().len() - 1 {
+                        lock.page += 1
                     }
                 }
-                lock.opened.clear();
-                lock.opened.append(&mut v);
-            } else {
-                lock.opened.push(click.name);
+                NAME_PAGE_DOWN => {
+                    if lock.page > 0 {
+                        lock.page -= 1
+                    }
+                }
+                _ => {
+                    if lock.opened.contains(&click.name) {
+                        let mut v = Vec::new();
+                        for i in &lock.opened {
+                            if *i != click.name {
+                                v.push(i.clone())
+                            }
+                        }
+                        lock.opened.clear();
+                        lock.opened.append(&mut v);
+                    } else {
+                        lock.opened.push(click.name);
+                    }
+                }
             }
             v = Vec::new();
         }
@@ -78,7 +96,8 @@ async fn main() -> Result<()> {
             .unwrap()
     });
     tokio::spawn(async move { manage_errors(r_result).await });
-    tokio::spawn(async move { manage_clicks(state).await });
+    let c = config.clone();
+    tokio::spawn(async move { manage_clicks(state, c).await });
 
     loop {
         config

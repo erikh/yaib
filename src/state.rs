@@ -4,6 +4,7 @@ use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Default)]
 pub struct State {
+    pub page: usize,
     pub opened: Vec<String>,
 }
 

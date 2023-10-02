@@ -4,6 +4,9 @@ use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
 
+pub const NAME_PAGE_UP: &str = "yaib-page-up";
+pub const NAME_PAGE_DOWN: &str = "yaib-page-down";
+
 #[derive(Debug, Clone, Default)]
 pub struct Bar {
     state: BTreeMap<String, Block>,
@@ -15,6 +18,26 @@ impl Bar {
         Self {
             state: BTreeMap::default(),
             internal_state,
+        }
+    }
+
+    async fn add_page_blocks(&self, v: &mut Vec<Block>, pages: usize) {
+        let page = self.internal_state.lock().await.page;
+
+        if page != pages {
+            v.push(Block {
+                name: Some(NAME_PAGE_UP.to_string()),
+                full_text: "▲".to_string(),
+                ..Default::default()
+            });
+        }
+
+        if page != 0 {
+            v.push(Block {
+                name: Some(NAME_PAGE_DOWN.to_string()),
+                full_text: "▼".to_string(),
+                ..Default::default()
+            });
         }
     }
 
@@ -63,12 +86,14 @@ impl Bar {
             let now = chrono::Local::now();
             if last_send + config.update_interval() < now {
                 let mut v = Vec::new();
-                let items = &config.pages()[0].items();
+                let items = &config.pages()[self.internal_state.lock().await.page].items();
                 for item in items {
                     if let Some(block) = self.state.get(&item.name) {
                         v.push(block.clone())
                     }
                 }
+
+                self.add_page_blocks(&mut v, config.pages().len() - 1).await;
 
                 if !last_sent.eq(&v) {
                     s.send(v.clone())?;
