@@ -126,6 +126,15 @@ Field descriptions follow:
             strftime
             format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html)
 
+## Unix Socket
+
+You can write blocks using the JSON format in the [i3 protocol, Section
+2.2](https://i3wm.org/docs/i3bar-protocol.html) block format. One block per
+write; use `yaib write-block '<block json>'` to write directly to the socket.
+The socket is also located at `/tmp/yaib.sock`; only the most recent copy of
+`yaib` running will respond to it, but you can use this with `nc` et al to
+control it. Just barf a Block JSON at the socket.
+
 ## License
 
 MIT
