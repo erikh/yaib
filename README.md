@@ -7,12 +7,18 @@ displaying statistics and other things you'd like to display.
 
 yaib is very immature at this writing. Lots of things you want won't be here.
 
-One feature that is someone novel about yaib is that it is expandable. Each
-block has an `icon` value which can then be clicked on to expand it. Combine it
-with the urgency coloring values, and you don't have to see text updating all
-day; just the colors when it matters.
+Some features:
 
-Here's the expanded Disk section in the default config:
+-   Expandable. Each block has an `icon` value which can then be clicked on to
+    expand it. Combine it with the urgency coloring values, and you don't have to
+    see text updating all day; just the colors when it matters.
+-   Pages: Flip between lots of different pages using the arrows. This way you
+    can hide less important things you care about in your bar, but get to them
+    when you want to.
+-   Resource light: yaib is very small and uses almost no resources.
+
+For an example of the expansion, here's the expanded Disk section in the
+default configuration:
 
 <img style="height: 25px; width: auto" src="one.png" />
 
@@ -71,9 +77,7 @@ Field descriptions follow:
     and displaying new stats. It is specified in [fancy duration
     format](https://docs.rs/fancy-duration/latest/fancy_duration/struct.FancyDuration.html)
     which you can read more about at that link.
--   `pages` is a list of pages to flip through, and is unsupported and planned
-    in the future. Merely fill out the first page via a YAML list of block
-    items with the following properties:
+-   `pages` is a list of pages to flip through. Each page consists of a list of items:
     -   `name` is the name of the block. It is required, and must be unique for all blocks.
     -   `icon` is the short initial clickable content. Not supported on static
         values. If not provided, it will display the formatted content always.
