@@ -1,8 +1,15 @@
 use anyhow::Result;
 use std::path::PathBuf;
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver};
+use tokio::{
+    io::AsyncWriteExt,
+    sync::mpsc::{unbounded_channel, UnboundedReceiver},
+};
 use yaib::{
-    bar::Bar, config::Config, input::manage_clicks, state::ProtectedState, unix::manage_unix_socket,
+    bar::{Bar, Block},
+    config::Config,
+    input::manage_clicks,
+    state::ProtectedState,
+    unix::{manage_unix_socket, SOCKET_PATH},
 };
 
 async fn manage_errors(mut r: UnboundedReceiver<Result<()>>) {
@@ -27,6 +34,21 @@ fn config_file() -> PathBuf {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let mut args = std::env::args();
+
+    if let Some(cmd) = args.nth(1) {
+        if cmd == "write-block" {
+            if let Some(s) = args.next() {
+                let _: Block = serde_json::from_str(&s)?; // just test that it parses
+                let mut stream = tokio::net::UnixStream::connect(SOCKET_PATH).await?;
+                stream.write_all(s.as_bytes()).await?;
+                drop(stream);
+            }
+
+            return Ok(());
+        }
+    }
+
     let config = Config::load(config_file())?;
     let (s_collection, r_collection) = unbounded_channel();
     let (s_result, r_result) = unbounded_channel();

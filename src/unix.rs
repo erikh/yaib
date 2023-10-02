@@ -2,9 +2,11 @@ use crate::bar::Block;
 use anyhow::Result;
 use tokio::{io::AsyncReadExt, net::UnixListener, sync::mpsc::UnboundedSender};
 
+pub const SOCKET_PATH: &str = "/tmp/yaib.sock";
+
 pub async fn manage_unix_socket(blocks: UnboundedSender<Block>) -> Result<()> {
-    let _ = std::fs::remove_file("/tmp/yaib.sock");
-    let listener = UnixListener::bind("/tmp/yaib.sock")?;
+    let _ = std::fs::remove_file(SOCKET_PATH);
+    let listener = UnixListener::bind(SOCKET_PATH)?;
 
     while let Ok((mut stream, _)) = listener.accept().await {
         let mut v = Vec::new();
