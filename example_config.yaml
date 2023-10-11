@@ -2,6 +2,14 @@ pages:
   - - name: static
       type: static
       value: "yaib rules"
+      # NOTE: see example_command.sh for more information
+      # - name: mycommand
+      #   type: command
+      #   value: "example_command.sh"
+      #   icon: "∞"
+      #   urgency: [25, 50, 80]
+      #   urgency_colors: ["#66FF66", "#FFFF44", "#FF6666"]
+      #   update_interval: 1s
     - name: music
       type: music
       format: "🎶: %artist - %title [%time]"

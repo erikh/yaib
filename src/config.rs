@@ -20,11 +20,11 @@ impl Config {
     }
 
     pub async fn launch_collectors(
-        &self,
+        &mut self,
         s: UnboundedSender<Collection>,
         result: UnboundedSender<Result<()>>,
     ) -> Result<()> {
-        for page in &self.pages {
+        for page in &mut self.pages {
             page.launch_collectors(s.clone(), result.clone()).await?;
         }
 
@@ -52,11 +52,11 @@ impl ConfigPage {
     }
 
     pub async fn launch_collectors(
-        &self,
+        &mut self,
         s: UnboundedSender<Collection>,
         result: UnboundedSender<Result<()>>,
     ) -> Result<()> {
-        for item in &self.0 {
+        for item in &mut self.0 {
             item.launch_collector(s.clone(), result.clone()).await?;
         }
 
@@ -84,6 +84,8 @@ pub enum ModuleType {
     Time,
     #[serde(rename = "music")]
     Music,
+    #[serde(rename = "command")]
+    Command,
 }
 
 impl From<CollectionType> for ModuleType {
@@ -97,8 +99,16 @@ impl From<CollectionType> for ModuleType {
             CollectionType::Load(..) => Self::Load,
             CollectionType::Time(..) => Self::Time,
             CollectionType::Music { .. } => Self::Music,
+            CollectionType::Command(..) => Self::Command,
         }
     }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct CommandItem {
+    pub name: String,
+    pub value: String,
+    pub percent: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -111,6 +121,10 @@ pub struct ConfigItem {
     pub urgency: Option<(u8, u8, u8)>,
     pub urgency_colors: Option<(String, String, String)>,
     pub icon: Option<String>,
+    pub update_interval: Option<FancyDuration<Duration>>,
+
+    #[serde(skip)]
+    pub(crate) last_updated: chrono::DateTime<chrono::Local>,
 }
 
 async fn spawn(
@@ -122,41 +136,53 @@ async fn spawn(
 
 impl ConfigItem {
     pub async fn launch_collector(
-        &self,
+        &mut self,
         s: UnboundedSender<Collection>,
         result: UnboundedSender<Result<()>>,
     ) -> Result<()> {
-        let clone = self.clone();
-        match self.typ {
-            ModuleType::Static => {
-                if self.value.is_some() {
-                    tokio::spawn(spawn(result, collect_static(s, clone)));
-                } else {
-                    return Err(anyhow!(
-                        "Static self.clone() '{}' must have a value",
-                        self.clone().name
-                    ));
+        if (self.update_interval.is_some()
+            && self.last_updated + self.update_interval.clone().unwrap().duration()
+                < chrono::Local::now())
+            || self.update_interval.is_none()
+        {
+            let clone = self.clone();
+
+            match self.typ {
+                ModuleType::Static => {
+                    if self.value.is_some() {
+                        tokio::spawn(spawn(result, collect_static(s, clone)));
+                    } else {
+                        return Err(anyhow!(
+                            "Static block '{}' must have a value",
+                            self.clone().name
+                        ));
+                    }
+                }
+                ModuleType::Dynamic => { /* no collector is launched for dynamic */ }
+                ModuleType::Time => {
+                    tokio::spawn(spawn(result, collect_time(s, clone)));
+                }
+                ModuleType::Load => {
+                    tokio::spawn(spawn(result, collect_load(s, clone)));
+                }
+                ModuleType::CPU => {
+                    tokio::spawn(spawn(result, collect_cpu(s, clone)));
+                }
+                ModuleType::Memory => {
+                    tokio::spawn(spawn(result, collect_memory(s, clone)));
+                }
+                ModuleType::Disk => {
+                    tokio::spawn(spawn(result, collect_disk(s, clone)));
+                }
+                ModuleType::Music => {
+                    tokio::spawn(spawn(result, collect_music(s, clone)));
+                }
+                ModuleType::Command => {
+                    tokio::spawn(spawn(result, collect_command(s, clone)));
                 }
             }
-            ModuleType::Dynamic => { /* no collector is launched for dynamic */ }
-            ModuleType::Time => {
-                tokio::spawn(spawn(result, collect_time(s, clone)));
-            }
-            ModuleType::Load => {
-                tokio::spawn(spawn(result, collect_load(s, clone)));
-            }
-            ModuleType::CPU => {
-                tokio::spawn(spawn(result, collect_cpu(s, clone)));
-            }
-            ModuleType::Memory => {
-                tokio::spawn(spawn(result, collect_memory(s, clone)));
-            }
-            ModuleType::Disk => {
-                tokio::spawn(spawn(result, collect_disk(s, clone)));
-            }
-            ModuleType::Music => {
-                tokio::spawn(spawn(result, collect_music(s, clone)));
-            }
+
+            self.last_updated = chrono::Local::now();
         }
 
         Ok(())

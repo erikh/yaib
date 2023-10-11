@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
         }
     }
 
-    let config = Config::load(config_file())?;
+    let mut config = Config::load(config_file())?;
     let (s_collection, r_collection) = unbounded_channel();
     let (s_result, r_result) = unbounded_channel();
     let (s_blocks, r_blocks) = unbounded_channel();

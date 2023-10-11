@@ -84,7 +84,8 @@ impl Bar {
         let mut last_sent = Vec::new();
 
         while let Some(collection) = data.recv().await {
-            let block = collection.to_block(self.internal_state.clone()).await;
+            let block = collection.to_block(self.internal_state.clone()).await?;
+
             if !matches!(collection.collection_type(), CollectionType::Dynamic) {
                 self.state.insert(collection.name(), block);
             }

@@ -1,6 +1,6 @@
 use crate::{
     bar::Block,
-    config::ConfigItem,
+    config::{CommandItem, ConfigItem},
     formatter::{Format, Rules},
 };
 use anyhow::{anyhow, Result};
@@ -28,6 +28,14 @@ impl Collection {
     fn get_formatter(&self) -> Format {
         let pair = match &self.collection_type {
             CollectionType::Static => (self.value.clone().unwrap(), Rules::default()),
+            CollectionType::Command(_) => (
+                if let Some(icon) = &self.item.icon {
+                    format!("{}: {}", icon, self.value.clone().unwrap())
+                } else {
+                    self.value.clone().unwrap()
+                },
+                Rules::default(),
+            ),
             CollectionType::Dynamic => (String::new(), Rules::default()),
             CollectionType::Time(t) => (
                 t.format(&self.format.clone().unwrap_or("%m/%d %H:%M".to_string()))
@@ -115,21 +123,21 @@ impl Collection {
         Format::new(pair.0, pair.1)
     }
 
-    pub async fn to_block(&self, state: crate::state::ProtectedState) -> Block {
+    pub async fn to_block(&self, state: crate::state::ProtectedState) -> Result<Block> {
         let mut block = Block::default();
 
-        let pct = match self.collection_type {
-            CollectionType::Static => 0,
-            CollectionType::Dynamic => 0,
+        let pct = match &self.collection_type {
+            CollectionType::Static | CollectionType::Dynamic => 0,
+            CollectionType::Command(command) => command.percent.unwrap_or(0),
             CollectionType::CPU { count: _, usage } => usage.floor() as u64,
             CollectionType::Disk { total, usage } => {
-                ((usage as f64 / total as f64) * 100.0).floor() as u64
+                ((*usage as f64 / *total as f64) * 100.0).floor() as u64
             }
             CollectionType::Load(one, ..) => {
                 ((one / num_cpus::get() as f64) * 100.0).floor() as u64
             }
             CollectionType::Memory { total, usage, .. } => {
-                ((usage as f64 / total as f64) * 100.0).floor() as u64
+                ((*usage as f64 / *total as f64) * 100.0).floor() as u64
             }
             CollectionType::Time(..) => 0,
             CollectionType::Music {
@@ -137,7 +145,7 @@ impl Collection {
                 title: _,
                 pct_played,
                 time_played: _,
-            } => pct_played as u64,
+            } => *pct_played as u64,
         };
 
         let urgency = if let Some(colors) = &self.item.urgency_colors {
@@ -178,7 +186,7 @@ impl Collection {
             block.full_text = self.get_formatter().format();
         }
 
-        block
+        Ok(block)
     }
 }
 
@@ -209,6 +217,7 @@ pub enum CollectionType {
         pct_played: usize,
         time_played: usize,
     },
+    Command(CommandItem),
 }
 
 pub async fn collect_static(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
@@ -343,6 +352,36 @@ pub async fn collect_music(s: UnboundedSender<Collection>, item: ConfigItem) -> 
                 })?;
             }
         }
+    }
+
+    Ok(())
+}
+
+pub async fn collect_command(s: UnboundedSender<Collection>, item: ConfigItem) -> Result<()> {
+    let clone = item.clone();
+
+    if let Some(value) = item.value {
+        let parts = value
+            .clone()
+            .split(" ")
+            .map(ToString::to_string)
+            .collect::<Vec<String>>();
+        let command: CommandItem = serde_json::from_slice(
+            &tokio::process::Command::new(parts[0].clone())
+                .args(&parts[1..parts.len()])
+                .output()
+                .await
+                .map(|x| x.stdout)?,
+        )?;
+
+        let c = command.clone();
+        s.send(Collection {
+            name: command.name,
+            collection_type: CollectionType::Command(c),
+            item: clone,
+            value: Some(command.value),
+            format: None,
+        })?;
     }
 
     Ok(())

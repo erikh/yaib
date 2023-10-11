@@ -75,9 +75,9 @@ should appear!
 
 ## Configuration
 
-There is an [example](example.yaml) configuration file. This configuration file
-can either be specified by setting `YAIB_CONFIG` in the environment, or by
-making a file in `$XDG_CONFIG_HOME/yaib/yaib.config.yaml`.
+There is an [example](example_config.yaml) configuration file. This
+configuration file can either be specified by setting `YAIB_CONFIG` in the
+environment, or by making a file in `$XDG_CONFIG_HOME/yaib/yaib.config.yaml`.
 
 Field descriptions follow:
 
@@ -97,6 +97,18 @@ Field descriptions follow:
         are used when the urgency thresholds are set.
     -   `type` is the type of block. `value` and `format` are dependent on this
         type, so they will be specified with the type below:
+        -   `command` runs a command. It does not run it through a shell, and
+            tokenizes the value by whitespace. The value is the command to run.
+            `update_interval` can be used to override the global
+            `update_interval` for slow running or needlessly updating commands.
+            See `example_command.sh` for more information. The command must
+            emit (and only emit) a JSON blob with the following three
+            parameters:
+            -   `name`: this is the name of the block you configured it with, so it can map back.
+            -   `value`: this is the data you want to show in the bar. The icon
+                will be automatically concatenated if it exists.
+            -   `percent`: this is optional, an integer from 0-100 which helps
+                with urgency coloring.
         -   `dynamic` is only for types which are updated by the unix socket
             (see below). It carries no value and communicates no urgency and
             has no format.
