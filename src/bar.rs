@@ -1,7 +1,4 @@
-use crate::{
-    collectors::{Collection, CollectionType},
-    config::Config,
-};
+use crate::{collectors::Collection, config::Config};
 use anyhow::Result;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -63,7 +60,6 @@ impl Bar {
         config: Config,
         mut w: impl std::io::Write + Send + 'static,
         mut data: UnboundedReceiver<Collection>,
-        mut blocks: UnboundedReceiver<Block>,
     ) -> Result<()> {
         serde_json::to_writer(
             &mut w,
@@ -85,19 +81,10 @@ impl Bar {
 
         while let Some(collection) = data.recv().await {
             let block = collection.to_block(self.internal_state.clone()).await?;
-
-            if !matches!(collection.collection_type(), CollectionType::Dynamic) {
-                self.state.insert(collection.name(), block);
-            }
+            self.state.insert(collection.name(), block);
 
             let now = chrono::Local::now();
             if last_send + config.update_interval() < now {
-                while let Ok(block) = blocks.try_recv() {
-                    if let Some(name) = block.clone().name {
-                        self.state.insert(name, block);
-                    }
-                }
-
                 let mut v = Vec::new();
                 let items = &config.pages()[self.internal_state.lock().await.page].items();
                 for item in items {

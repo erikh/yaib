@@ -1,6 +1,6 @@
 [package]
 name = "yaib"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "yaib is Yet Another i3 Bar, with a focus on displaying lots of data"
 authors = ["Erik Hollensbe <git@hollensbe.org>"]

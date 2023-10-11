@@ -3,7 +3,11 @@ use anyhow::{anyhow, Result};
 use chrono::Duration;
 use fancy_duration::FancyDuration;
 use serde_derive::{Deserialize, Serialize};
-use tokio::sync::mpsc::UnboundedSender;
+use std::sync::Arc;
+use tokio::sync::{
+    mpsc::{UnboundedReceiver, UnboundedSender},
+    Mutex,
+};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -23,9 +27,11 @@ impl Config {
         &mut self,
         s: UnboundedSender<Collection>,
         result: UnboundedSender<Result<()>>,
+        commands: Arc<Mutex<UnboundedReceiver<CommandItem>>>,
     ) -> Result<()> {
         for page in &mut self.pages {
-            page.launch_collectors(s.clone(), result.clone()).await?;
+            page.launch_collectors(s.clone(), result.clone(), commands.clone())
+                .await?;
         }
 
         Ok(())
@@ -55,9 +61,11 @@ impl ConfigPage {
         &mut self,
         s: UnboundedSender<Collection>,
         result: UnboundedSender<Result<()>>,
+        commands: Arc<Mutex<UnboundedReceiver<CommandItem>>>,
     ) -> Result<()> {
         for item in &mut self.0 {
-            item.launch_collector(s.clone(), result.clone()).await?;
+            item.launch_collector(s.clone(), result.clone(), commands.clone())
+                .await?;
         }
 
         Ok(())
@@ -92,7 +100,7 @@ impl From<CollectionType> for ModuleType {
     fn from(value: CollectionType) -> Self {
         match value {
             CollectionType::Static => Self::Static,
-            CollectionType::Dynamic => Self::Dynamic,
+            CollectionType::Dynamic(..) => Self::Dynamic,
             CollectionType::CPU { .. } => Self::CPU,
             CollectionType::Disk { .. } => Self::Disk,
             CollectionType::Memory { .. } => Self::Memory,
@@ -139,6 +147,7 @@ impl ConfigItem {
         &mut self,
         s: UnboundedSender<Collection>,
         result: UnboundedSender<Result<()>>,
+        commands: Arc<Mutex<UnboundedReceiver<CommandItem>>>,
     ) -> Result<()> {
         if (self.update_interval.is_some()
             && self.last_updated + self.update_interval.clone().unwrap().duration()
@@ -158,7 +167,9 @@ impl ConfigItem {
                         ));
                     }
                 }
-                ModuleType::Dynamic => { /* no collector is launched for dynamic */ }
+                ModuleType::Dynamic => {
+                    tokio::spawn(spawn(result, collect_dynamic(s, clone, commands.clone())));
+                }
                 ModuleType::Time => {
                     tokio::spawn(spawn(result, collect_time(s, clone)));
                 }

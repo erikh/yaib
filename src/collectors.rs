@@ -5,7 +5,11 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use pretty_bytes::converter::convert;
-use tokio::sync::mpsc::UnboundedSender;
+use std::sync::Arc;
+use tokio::sync::{
+    mpsc::{UnboundedReceiver, UnboundedSender},
+    Mutex,
+};
 
 #[derive(Debug, Clone)]
 pub struct Collection {
@@ -28,7 +32,7 @@ impl Collection {
     fn get_formatter(&self) -> Format {
         let pair = match &self.collection_type {
             CollectionType::Static => (self.value.clone().unwrap(), Rules::default()),
-            CollectionType::Command(_) => (
+            CollectionType::Command(_) | CollectionType::Dynamic(_) => (
                 if let Some(icon) = &self.item.icon {
                     format!("{}: {}", icon, self.value.clone().unwrap())
                 } else {
@@ -36,7 +40,6 @@ impl Collection {
                 },
                 Rules::default(),
             ),
-            CollectionType::Dynamic => (String::new(), Rules::default()),
             CollectionType::Time(t) => (
                 t.format(&self.format.clone().unwrap_or("%m/%d %H:%M".to_string()))
                     .to_string(),
@@ -127,8 +130,10 @@ impl Collection {
         let mut block = Block::default();
 
         let pct = match &self.collection_type {
-            CollectionType::Static | CollectionType::Dynamic => 0,
-            CollectionType::Command(command) => command.percent.unwrap_or(0),
+            CollectionType::Static => 0,
+            CollectionType::Command(command) | CollectionType::Dynamic(command) => {
+                command.percent.unwrap_or(0)
+            }
             CollectionType::CPU { count: _, usage } => usage.floor() as u64,
             CollectionType::Disk { total, usage } => {
                 ((*usage as f64 / *total as f64) * 100.0).floor() as u64
@@ -194,7 +199,7 @@ impl Collection {
 #[derive(Debug, Clone)]
 pub enum CollectionType {
     Static,
-    Dynamic,
+    Dynamic(CommandItem),
     CPU {
         count: usize,
         usage: f64,
@@ -384,5 +389,23 @@ pub async fn collect_command(s: UnboundedSender<Collection>, item: ConfigItem) -
         })?;
     }
 
+    Ok(())
+}
+
+pub async fn collect_dynamic(
+    s: UnboundedSender<Collection>,
+    item: ConfigItem,
+    commands: Arc<Mutex<UnboundedReceiver<CommandItem>>>,
+) -> Result<()> {
+    while let Ok(command) = commands.lock().await.try_recv() {
+        let c = command.clone();
+        s.send(Collection {
+            name: command.name,
+            collection_type: CollectionType::Dynamic(c),
+            format: None,
+            item: item.clone(),
+            value: Some(command.value),
+        })?;
+    }
     Ok(())
 }

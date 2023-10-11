@@ -147,12 +147,12 @@ Field descriptions follow:
 recommended that if you use this feature, you use it through `yaib` commands,
 and not writing to the socket directly, as the protocol is certain to change.
 
-You can write blocks using the JSON format in the [i3 protocol, Section
-2.2](https://i3wm.org/docs/i3bar-protocol.html) block format. One block per
-write; use `yaib write-block '<block json>'` to write directly to the socket.
-The socket is also located at `/tmp/yaib.sock`; only the most recent copy of
-`yaib` running will respond to it, but you can use this with `nc` et al to
-control it. Just barf a Block JSON at the socket.
+You can write blocks using the JSON format also used for the `command` type.
+One block per write; use `yaib write-block '<block json>'` to write directly to
+the socket. The socket is also located at `/tmp/yaib.sock`; only the most
+recent copy of `yaib` running will respond to it, but you can use this with
+`nc` et al to control it. Just barf some JSON at the socket. See
+[example_command.sh](example_command.sh) for an example of the output format.
 
 Whatever the block's `name` value is set to will replace the block in the bar.
 If this block is not of a `dynamic` type in the configuration, it will not

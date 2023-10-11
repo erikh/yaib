@@ -1,10 +1,10 @@
-use crate::bar::Block;
+use crate::config::CommandItem;
 use anyhow::Result;
 use tokio::{io::AsyncReadExt, net::UnixListener, sync::mpsc::UnboundedSender};
 
 pub const SOCKET_PATH: &str = "/tmp/yaib.sock";
 
-pub async fn manage_unix_socket(blocks: UnboundedSender<Block>) -> Result<()> {
+pub async fn manage_unix_socket(blocks: UnboundedSender<CommandItem>) -> Result<()> {
     let _ = std::fs::remove_file(SOCKET_PATH);
     let listener = UnixListener::bind(SOCKET_PATH)?;
 

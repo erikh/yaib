@@ -1,0 +1,5 @@
+-   v0.2.0:
+    -   Command Support
+    -   Unix Socket Support
+-   v0.1.0:
+    -   Initial release
