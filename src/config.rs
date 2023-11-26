@@ -17,6 +17,9 @@ pub struct Config {
 
 impl Config {
     pub fn load(filename: std::path::PathBuf) -> Result<Self> {
+        if !filename.exists() {
+            return Err(anyhow!("Config file '{}' does not exist", filename.display()));
+        }
         let mut io = std::fs::OpenOptions::new();
         io.read(true);
         let r = io.open(filename)?;
